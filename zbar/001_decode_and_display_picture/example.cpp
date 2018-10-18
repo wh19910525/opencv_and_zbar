@@ -27,16 +27,18 @@ int main(int argc, char*argv[])
         return -2;
     }
 
-    ImageScanner scanner;
-    scanner.set_config(ZBAR_NONE, ZBAR_CFG_ENABLE, 1);
-
     Mat image = imread(argv[1]);
     Mat imageGray;
     //RGB颜色空间 转换到 灰度空间;
     cvtColor(image, imageGray, CV_RGB2GRAY);
+
     int width = imageGray.cols;
     int height = imageGray.rows;
     uchar *raw = (uchar *)imageGray.data;
+
+////////////////////////
+    ImageScanner scanner;
+    scanner.set_config(ZBAR_NONE, ZBAR_CFG_ENABLE, 1);
 
     Image imageZbar(width, height, "Y800", raw, width * height);
 
@@ -54,8 +56,8 @@ int main(int argc, char*argv[])
         cout << "    Value：" << symbol->get_data()<<endl<<endl;
     }
 
-    //imshow("Source Image", image);
-    imshow("Source Image", imageGray);
+    imshow("Source Image", image);
+    //imshow("Gray Image", imageGray);
 
     waitKey();
 

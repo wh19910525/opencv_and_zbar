@@ -27,28 +27,78 @@ int main(int argc,char*argv[])
         return -2;
     }
 
-    Mat imageSource=imread(argv[1],0);  
+    Mat imageSource = imread(argv[1], 0);
     Mat image;
     imageSource.copyTo(image);
-    GaussianBlur(image,image,Size(3,3),0);  //滤波
-    threshold(image,image,100,255,CV_THRESH_BINARY);  //二值化
-    imshow("二值化",image); 
-    Mat element=getStructuringElement(2,Size(7,7));  //膨胀腐蚀核
+
+    imshow("Source image", image);
+
+    /*
+     * 1. 滤波
+     */
+    GaussianBlur(image, image, Size(3,3), 0);
+    imshow("1. 滤波", image);
+
+#if 1
+    /*
+     * 2. 二值化
+     */
+    threshold(image, image, 100, 255, CV_THRESH_BINARY);
+    imshow("2. 二值化", image);
+#else
+
+    int binarize_value = 0;
+    char window_name[100];
+    while(1){
+        printf("binarize-value=%d\n", binarize_value);
+
+        memset(window_name, 0, sizeof(window_name));
+        sprintf(window_name, "二值化:%d", binarize_value);
+        Mat binarize_img = image.clone();
+
+        threshold(binarize_img, binarize_img, binarize_value, 255, CV_THRESH_BINARY);
+        imshow(window_name, binarize_img);
+
+        int key = waitKey();
+        printf("03, binarize-value=%d, key=%d\n\n", binarize_value, key);
+        if(key == 'q'){
+            break;
+        }
+
+        binarize_value += 20;
+        if(binarize_value > 255){
+            binarize_value = 0;
+        }
+    }
+#endif
+
+    /*
+     * 3. 膨胀腐蚀核
+     */
+    //定义结构元素;
+    Mat element = getStructuringElement(2,Size(7,7));
     //morphologyEx(image,image,MORPH_OPEN,element); 
     for(int i=0;i<10;i++)
     {
-        erode(image,image,element);
+        erode(image, image, element);
         i++;
     }   
-    imshow("腐蚀s",image);
+    imshow("3. 腐蚀", image);
+
+    /*
+     * 4. 形态学边界
+     */
     Mat image1;
     erode(image,image1,element);
     image1=image-image1;
-    imshow("边界",image1);
-    //寻找直线 边界定位也可以用findContours实现
+    imshow("4. 边界", image1);
+
+    /*
+     * 5. 寻找直线 边界定位也可以用findContours实现
+     */
     vector<Vec2f>lines;
-    HoughLines(image1,lines,1,CV_PI/150,250,0,0);
-    Mat DrawLine=Mat::zeros(image1.size(),CV_8UC1);
+    HoughLines(image1, lines, 1, CV_PI/150, 250, 0, 0);
+    Mat DrawLine = Mat::zeros(image1.size(), CV_8UC1);
     for(int i=0;i<lines.size();i++)
     {
         float rho=lines[i][0];
@@ -60,19 +110,28 @@ int main(int argc,char*argv[])
         pt1.y=cvRound(y0+1000*a);
         pt2.x=cvRound(x0-1000*(-b));
         pt2.y=cvRound(y0-1000*a);
+
         line(DrawLine,pt1,pt2,Scalar(255),1,CV_AA);
     }
-    imshow("直线",DrawLine);
+    imshow("5. 寻找直线", DrawLine);
+
+    /*
+     * 6. 角点检测
+     */
     Point2f P1[4];
     Point2f P2[4];
     vector<Point2f>corners;
-    goodFeaturesToTrack(DrawLine,corners,4,0.1,10,Mat()); //角点检测
+    goodFeaturesToTrack(DrawLine,corners,4,0.1,10,Mat());
     for(int i=0;i<corners.size();i++)
     {
         circle(DrawLine,corners[i],3,Scalar(255),3);
         P1[i]=corners[i];       
     }
-    imshow("交点",DrawLine);
+    imshow("6. 交点", DrawLine);
+
+    /*
+     * 7. 校正
+     */
     int width=P1[1].x-P1[0].x;
     int hight=P1[2].y-P1[0].y;
     P2[0]=P1[0];
@@ -80,31 +139,35 @@ int main(int argc,char*argv[])
     P2[2]=Point2f(P2[0].x,P2[1].y+hight);
     P2[3]=Point2f(P2[1].x,P2[2].y);
     Mat elementTransf;
-    elementTransf=  getAffineTransform(P1,P2);
+    elementTransf = getAffineTransform(P1,P2);
     warpAffine(imageSource,imageSource,elementTransf,imageSource.size(),1,0,Scalar(255));
-    imshow("校正",imageSource); 
-    //Zbar二维码识别
-    ImageScanner scanner;      
-    scanner.set_config(ZBAR_NONE, ZBAR_CFG_ENABLE, 1); 
-    int width1 = imageSource.cols;      
-    int height1 = imageSource.rows;      
-    uchar *raw = (uchar *)imageSource.data;         
-    Image imageZbar(width1, height1, "Y800", raw, width * height1);        
-    scanner.scan(imageZbar); //扫描条码    
-    Image::SymbolIterator symbol = imageZbar.symbol_begin();  
-    if(imageZbar.symbol_begin()==imageZbar.symbol_end())  
-    {  
-        cout<<"查询条码失败，请检查图片！"<<endl;  
-    }  
-    for(;symbol != imageZbar.symbol_end();++symbol)    
-    {      
-        cout<<"类型："<<endl<<symbol->get_type_name()<<endl<<endl;    
-        cout<<"条码："<<endl<<symbol->get_data()<<endl<<endl;       
-    }      
-    namedWindow("Source Window",0);
-    imshow("Source Window",imageSource);        
-    waitKey();    
-    imageZbar.set_data(NULL,0);  
+    imshow("7. 校正", imageSource); 
+
+    /*
+     * 8. Zbar二维码识别
+     */
+    ImageScanner scanner;
+    scanner.set_config(ZBAR_NONE, ZBAR_CFG_ENABLE, 1);
+    int width1 = imageSource.cols;
+    int height1 = imageSource.rows;
+    uchar *raw = (uchar *)imageSource.data;
+    Image imageZbar(width1, height1, "Y800", raw, width * height1);
+    scanner.scan(imageZbar); //扫描条码
+    Image::SymbolIterator symbol = imageZbar.symbol_begin();
+    if(imageZbar.symbol_begin()==imageZbar.symbol_end())
+    {
+        cout<<"查询条码失败，请检查图片！"<<endl;
+    }
+    for(;symbol != imageZbar.symbol_end();++symbol)
+    {
+        cout<<"类型："<<endl<<symbol->get_type_name()<<endl<<endl;
+        cout<<"条码："<<endl<<symbol->get_data()<<endl<<endl;
+    }
+
+    int key = waitKey();
+    printf("key-value=%d\n", key);
+
+    imageZbar.set_data(NULL, 0);
 
     return 0;
 }
