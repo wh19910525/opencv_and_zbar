@@ -1,706 +1,608 @@
-/******************************************************
-ÎÄ¼şÃû   :main.cpp
-Ãè  Êö   :ÌõĞÎÂë£¬¶şÎ¬ÂëµÄÊ¶±ğ
-Óï  ÑÔ   :
-×÷  Õß   :·¶Ôó»ª
-ĞŞ  ¸Ä   :
-ÈÕ  ÆÚ   :2018-05-19
-Ëµ  Ã÷   :ĞèÒªZbarµÄÖ§³Ö
-******************************************************/
-#include <opencv2/opencv.hpp>
-#include <iostream>
-#include <zbar.h>
+#include "MyClass.h"
 
-using namespace cv;
-using namespace std;
-using namespace zbar;
-
-class MyClass
-{
-public:
-	MyClass();
-	MyClass(char* argv);
-	~MyClass();
-	void Dis_code(Mat image);
-	void Run();
-	void QrRun();
-	Mat getGray(Mat image, bool show = false);//»ñÈ¡»Ò¶ÈÍ¼
-	Mat getGass(Mat image, bool show = false);//¸ßË¹Æ½»¬ÂË²¨
-	Mat getSobel(Mat image, bool show = false);//Sobel x¡ªyÌİ¶È²î
-	Mat getBlur(Mat image, bool show = false);//¾ùÖµÂË²¨³ı¸ßÆµÔëÉù
-	Mat getThold(Mat image, bool show = false);//¶şÖµ»¯
-	Mat getBys(Mat image, bool show = false);//±ÕÔËËã
-	Mat getErode(Mat image, bool show = false);//¸¯Ê´
-	Mat getDilate(Mat image, bool show = false);//ÅòÕÍ
-	Mat getRect(Mat image, Mat simage, bool show = false);//»ñÈ¡·¶Î§
-	Mat getRotate(Mat image,double angle);
-	bool IsCorrect(Point point[]);//ÅĞ¶ÏÊÇ·ñÕı¶Ô
-	Point Center_cal(vector<vector<Point> > contours, int i);
-private:
-	Mat srcimage;//Ô­Í¼
-	Mat element;//ºË
-};
-/******************************************************
-º¯ÊıÃû³Æ£º MyClass
-º¯Êı¹¦ÄÜ£º ³õÊ¼»¯
-´«Èë²ÎÊı£º
-·µ »Ø Öµ£º
-½¨Á¢Ê±¼ä£º 2018-05-19
-ĞŞ¸ÄÊ±¼ä£º
-½¨ Á¢ ÈË£º ·¶Ôó»ª
-ĞŞ ¸Ä ÈË£º
-ÆäËüËµÃ÷£º
-******************************************************/
 MyClass::MyClass()
 {
-	srcimage = imread("qr.png");//"F:\Pictures\qr.png""F:\Pictures\ÌõĞÎÂë.png"
-	//srcimage = imread("F:\\Pictures\\qr²âÊÔ.png");
-	//srcimage = imread("ÌõÂë.jpg");
-	if (srcimage.empty()){
-		printf("ÎÄ¼ş²»´æÔÚ");
-		exit(1);
-	}
-	//resize(srcimage, srcimage, Size(srcimage.size().width/2, srcimage.size().height/2));
-	element = getStructuringElement(0, Size(7, 7));
-	//Dis_code(srcimage);
+    srcimage = imread("qr.png");//"F:\Pictures\qr.png""F:\Pictures\æ¡å½¢ç .png"
+    //srcimage = imread("F:\\Pictures\\qræµ‹è¯•.png");
+    //srcimage = imread("æ¡ç .jpg");
+    if (srcimage.empty()){
+        printf("æ–‡ä»¶ä¸å­˜åœ¨");
+        exit(1);
+    }
+    //resize(srcimage, srcimage, Size(srcimage.size().width/2, srcimage.size().height/2));
+    element = getStructuringElement(0, Size(7, 7));
 }
 /******************************************************
-º¯ÊıÃû³Æ£º MyClass
-º¯Êı¹¦ÄÜ£º ³õÊ¼»¯
-´«Èë²ÎÊı£º char* argv
-·µ »Ø Öµ£º
-½¨Á¢Ê±¼ä£º 2018-05-19
-ĞŞ¸ÄÊ±¼ä£º
-½¨ Á¢ ÈË£º ·¶Ôó»ª
-ĞŞ ¸Ä ÈË£º
-ÆäËüËµÃ÷£º
-******************************************************/
-MyClass::MyClass(char* argv)
+  å‡½æ•°åç§°ï¼š QrRun
+  å‡½æ•°åŠŸèƒ½ï¼š å¼€å§‹
+  ä¼ å…¥å‚æ•°ï¼š
+  è¿” å› å€¼ï¼š
+  å»ºç«‹æ—¶é—´ï¼š 2018-05-19
+  ä¿®æ”¹æ—¶é—´ï¼š
+  å»º ç«‹ äººï¼š èŒƒæ³½å
+  ä¿® æ”¹ äººï¼š
+  å…¶å®ƒè¯´æ˜ï¼š
+ ******************************************************/
+void MyClass::QrRun(){
+    RNG rng(12345);
+    //imshow("åŸå›¾", srcimage);
+    Mat src_all = srcimage.clone();
+    Mat src_gray;
+    //ç°åº¦å¤„ç†
+    src_gray = getBlur(getGray(srcimage));
+
+    Scalar color = Scalar(1, 1, 255);
+    Mat threshold_output;
+    vector<vector<Point> > contours, contours2;
+    vector<Vec4i> hierarchy;
+    Mat drawing = Mat::zeros(srcimage.size(), CV_8UC3);
+    Mat drawing2 = Mat::zeros(srcimage.size(), CV_8UC3);
+    Mat drawingAllContours = Mat::zeros(srcimage.size(), CV_8UC3);
+
+    threshold_output = getThold(src_gray);
+
+    findContours(threshold_output, contours, hierarchy, CV_RETR_TREE, CHAIN_APPROX_NONE, Point(0, 0));
+
+    int c = 0, ic = 0, k = 0, area = 0;
+    // è¾¹ç¼˜æ£€æµ‹ 
+    //é€šè¿‡é»‘è‰²å®šä½è§’ä½œä¸ºçˆ¶è½®å»“ï¼Œæœ‰ä¸¤ä¸ªå­è½®å»“çš„ç‰¹ç‚¹ï¼Œç­›é€‰å‡ºä¸‰ä¸ªå®šä½è§’  
+    int parentIdx = -1;
+    for (int i = 0; i< contours.size(); i++)
+    {
+        //ç”»å‡ºæ‰€ä»¥è½®å»“å›¾  
+        drawContours(drawingAllContours, contours, parentIdx, CV_RGB(255, 255, 255), 1, 8);
+        if (hierarchy[i][2] != -1 && ic == 0)
+        {
+            parentIdx = i;
+            ic++;
+        }
+        else if (hierarchy[i][2] != -1)
+        {
+            ic++;
+        }
+        else if (hierarchy[i][2] == -1)
+        {
+            ic = 0;
+            parentIdx = -1;
+        }
+        //ç‰¹å¾è½®å»“æ£€æµ‹ - ã€‹
+        //æœ‰ä¸¤ä¸ªå­è½®å»“  
+        if (ic >= 2)
+        {
+            //ä¿å­˜æ‰¾åˆ°çš„ä¸‰ä¸ªé»‘è‰²å®šä½è§’  
+            contours2.push_back(contours[parentIdx]);
+            //ç”»å‡ºä¸‰ä¸ªé»‘è‰²å®šä½è§’çš„è½®å»“  
+            drawContours(drawing, contours, parentIdx, CV_RGB(rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255)), 1, 8);
+            ic = 0;
+            parentIdx = -1;
+        }
+    }
+    //æå–ç‰¹å¾ç‚¹ 
+    //å¡«å……çš„æ–¹å¼ç”»å‡ºé»‘è‰²å®šä½è§’çš„è½®å»“  
+    for (int i = 0; i<contours2.size(); i++)
+        drawContours(drawing2, contours2, i, CV_RGB(rng.uniform(100, 255), rng.uniform(100, 255), rng.uniform(100, 255)), -1, 4, hierarchy[k][2], 0, Point());
+
+    //è·å–å®šä½è§’çš„ä¸­å¿ƒåæ ‡  
+    vector<Point> pointfind;
+    for (int i = 0; i<contours2.size(); i++)
+    {
+        pointfind.push_back(Center_cal(contours2, i));
+    }
+    //æ’é™¤å¹²æ‰°ç‚¹
+    Mat dst;
+    Point point[3]; double angle; Mat rot_mat;
+    ///é€‰æ‹©åˆé€‚çš„ç‚¹-æ ¸å¿ƒç­›é€‰
+    if (pointfind.size()>3){
+        double lengthA = 10000000000000000, lengthB = 10000000000000000000;
+        for (int i = 0; i < pointfind.size(); i++){
+            for (int j = 0; j < pointfind.size(); j++){
+                for (int k = 0; k < pointfind.size(); k++){
+                    if (i != j&&j != k&&i != k){
+                        double dxa, dxb,dya,dyb;
+                        double k1, k2, wa, wb;
+                        dxa = pointfind[i].x - pointfind[j].x;
+                        dxb = pointfind[i].x - pointfind[k].x;
+                        dya = pointfind[i].y - pointfind[j].y;
+                        dyb = pointfind[i].y - pointfind[k].y;
+                        if (dxa == 0 || dxb == 0)continue;
+                        k1 = dya/dxa;
+                        k2 = dyb/dxb ;
+                        wa = sqrt(pow(dya, 2) + pow(dya, 2));
+                        wb = sqrt(pow(dyb, 2) + pow(dxb, 2));
+                        double anglea = abs(atan(k1) * 180 / CV_PI) + abs(atan(k2) * 180 / CV_PI);
+                        if (int(anglea)>=85&&int(anglea)<=95&&wa<=lengthA&&wb<=lengthB){
+                            lengthA = wa;
+                            lengthB = wb;
+                            point[0] = pointfind[i];
+                            point[1] = pointfind[j];
+                            point[2] = pointfind[k];
+                        }
+                    }
+                }
+            }
+        }
+    }
+    else{
+        for (int i = 0; i < 3; i++){
+            point[i] = pointfind[i];
+        }
+    }
+    //ç»˜åˆ¶ç›´è§’ä¸‰è§’å½¢ 
+    //è®¡ç®—è½®å»“çš„é¢ç§¯ï¼Œè®¡ç®—å®šä½è§’çš„é¢ç§¯ï¼Œä»è€Œè®¡ç®—å‡ºè¾¹é•¿  
+    area = contourArea(contours2[0]);
+    int area_side = cvRound(sqrt(double(area)));
+    for (int i = 0; i < 3; i++){
+        line(drawing2, point[i], point[(i + 1)%3], color, area_side / 2, 8);
+    }
+
+    //çº æ­£æ—‹è½¬
+    //åˆ¤æ–­æ˜¯å¦æ­£å¯¹
+    if (!IsCorrect(point)){
+        //è¿›å…¥ä¿®æ­£ç¯èŠ‚
+        double angle; Mat rot_mat;
+        int start = 0;
+        for (int i = 0; i < 3; i++){
+            double k1, k2,kk;
+            k1 = (point[i].y - point[(i + 1) % 3].y) / (point[i].x - point[(i + 1) % 3].x);
+            k2 = (point[i].y - point[(i + 2) % 3].y) / (point[i].x - point[(i + 2) % 3].x);
+            kk = k1*k2;
+            if (k1*k2 <0)
+                start = i;
+        }
+        double ax, ay, bx, by;
+        ax = point[(start + 1) % 3].x;
+        ay = point[(start + 1) % 3].y;
+        bx = point[(start + 2) % 3].x;
+        by = point[(start + 2) % 3].y;
+        Point2f center(abs(ax - bx) / 2, abs(ay -by)/ 2);
+        double dy = ay - by;
+        double dx = ax - bx;
+        double k3 = dy / dx;
+        angle =atan(k3) * 180 / CV_PI;//è½¬åŒ–è§’åº¦
+        rot_mat = getRotationMatrix2D(center, angle, 1.0);
+
+        warpAffine(src_all, dst, rot_mat, src_all.size(), 1, 0, 0);//æ—‹è½¬åŸå›¾æŸ¥çœ‹
+        warpAffine(drawing2, drawing2, rot_mat, src_all.size(), 1, 0, 0);//æ—‹è½¬è¿çº¿å›¾
+        warpAffine(src_all, src_all, rot_mat, src_all.size(), 1, 0, 0);//æ—‹è½¬åŸå›¾
+
+        namedWindow("Dst");
+        imshow("Dst", dst);
+    }
+
+    namedWindow("DrawingAllContours");
+    imshow("DrawingAllContours", drawingAllContours);
+
+    namedWindow("Drawing2");
+    imshow("Drawing2", drawing2);
+
+    namedWindow("Drawing");
+    imshow("Drawing", drawing);
+
+    //æå–ROI
+    //æ¥ä¸‹æ¥è¦æ¡†å‡ºè¿™æ•´ä¸ªäºŒç»´ç   
+    Mat gray_all, threshold_output_all;
+    vector<vector<Point> > contours_all;
+    vector<Vec4i> hierarchy_all;
+    cvtColor(drawing2, gray_all, CV_BGR2GRAY);
+
+
+    threshold(gray_all, threshold_output_all, 45, 255, THRESH_BINARY);
+    findContours(threshold_output_all, contours_all, hierarchy_all, RETR_EXTERNAL, CHAIN_APPROX_NONE, Point(0, 0));//RETR_EXTERNALè¡¨ç¤ºåªå¯»æ‰¾æœ€å¤–å±‚è½®å»“  
+
+
+    Point2f fourPoint2f[4];
+    //æ±‚æœ€å°åŒ…å›´çŸ©å½¢  
+    RotatedRect rectPoint = minAreaRect(contours_all[1]);//pointfind.size()-3
+
+    //å°†rectPointå˜é‡ä¸­å­˜å‚¨çš„åæ ‡å€¼æ”¾åˆ° fourPointçš„æ•°ç»„ä¸­  
+    rectPoint.points(fourPoint2f);
+
+    int maxx = 0, maxy = 0, minx = 100000, miny = 100000;
+    for (int i = 0; i < 4; i++)
+    {
+        if (maxx < fourPoint2f[i].x)maxx = fourPoint2f[i].x;
+        if (maxy < fourPoint2f[i].y)maxy = fourPoint2f[i].y;
+        if (minx > fourPoint2f[i].x)minx = fourPoint2f[i].x;
+        if (miny > fourPoint2f[i].y)miny = fourPoint2f[i].y;
+        line(src_all, fourPoint2f[i % 4], fourPoint2f[(i + 1) % 4]
+                , Scalar(0), 3);
+    }
+    namedWindow("Src_all");
+    ///è¾¹é™…å¤„ç†
+    int set_inter = 5;
+    while (true)
+    {
+        minx -= set_inter;
+        miny -= set_inter;
+        maxx += set_inter;
+        maxy += set_inter;
+        if (maxx > srcimage.size().width || maxy > srcimage.size().height || minx < 0 || miny < 0){
+            minx += set_inter;
+            miny += set_inter;
+            maxx -= set_inter;
+            maxy -= set_inter;
+            set_inter--;
+        }
+        else
+        {
+            break;
+        }
+    }
+    imshow("Src_all", src_all(Rect(minx, miny, maxx - minx, maxy - miny)));//ROI
+    Mat fout = src_all(Rect(minx, miny, maxx - minx, maxy - miny));//ROI
+
+    //è¯†åˆ«
+    Dis_code(fout);
+
+    waitKey(0);
+    destroyAllWindows();
+}
+/******************************************************
+  å‡½æ•°åç§°ï¼š get Rect
+  å‡½æ•°åŠŸèƒ½ï¼š è·å–è½®å»“çš„ä¸­å¿ƒç‚¹
+  ä¼ å…¥å‚æ•°ï¼š vector<vector<Point> > contours, int i
+  è¿” å› å€¼ï¼š
+  å»ºç«‹æ—¶é—´ï¼š 2018-05-19
+  ä¿®æ”¹æ—¶é—´ï¼š
+  å»º ç«‹ äººï¼š èŒƒæ³½å
+  ä¿® æ”¹ äººï¼š
+  å…¶å®ƒè¯´æ˜ï¼š
+ ******************************************************/
+Point MyClass::Center_cal(vector<vector<Point> > contours, int i)
 {
-	srcimage = imread(argv);
-	if (srcimage.empty()){
-		printf("ÎÄ¼ş²»´æÔÚ");
-		exit(1);
-	}
-	resize(srcimage, srcimage, Size(500, 500));
-	element = getStructuringElement(0, Size(7, 7));
+    int centerx = 0, centery = 0, n = contours[i].size();
+    //åœ¨æå–çš„å°æ­£æ–¹å½¢çš„è¾¹ç•Œä¸Šæ¯éš”å‘¨é•¿ä¸ªåƒç´ æå–ä¸€ä¸ªç‚¹çš„åæ ‡ï¼Œ  
+    //æ±‚æ‰€æå–å››ä¸ªç‚¹çš„å¹³å‡åæ ‡ï¼ˆå³ä¸ºå°æ­£æ–¹å½¢çš„å¤§è‡´ä¸­å¿ƒï¼‰  
+    centerx = (contours[i][n / 4].x + contours[i][n * 2 / 4].x + contours[i][3 * n / 4].x + contours[i][n - 1].x) / 4;
+    centery = (contours[i][n / 4].y + contours[i][n * 2 / 4].y + contours[i][3 * n / 4].y + contours[i][n - 1].y) / 4;
+    Point point1 = Point(centerx, centery);
+    return point1;
 }
 /******************************************************
-º¯ÊıÃû³Æ£º ~MyClass
-º¯Êı¹¦ÄÜ£º ÊÍ·Å¿Õ¼ä
-´«Èë²ÎÊı£º
-·µ »Ø Öµ£º
-½¨Á¢Ê±¼ä£º 2018-05-19
-ĞŞ¸ÄÊ±¼ä£º
-½¨ Á¢ ÈË£º ·¶Ôó»ª
-ĞŞ ¸Ä ÈË£º
-ÆäËüËµÃ÷£º
-******************************************************/
+  å‡½æ•°åç§°ï¼š getRotate
+  å‡½æ•°åŠŸèƒ½ï¼š æ—‹è½¬ä¿ç•™åŸç”»
+  ä¼ å…¥å‚æ•°ï¼š 
+  è¿” å› å€¼ï¼š
+  å»ºç«‹æ—¶é—´ï¼š 2018-05-19
+  ä¿®æ”¹æ—¶é—´ï¼š
+  å»º ç«‹ äººï¼š èŒƒæ³½å
+  ä¿® æ”¹ äººï¼š
+  å…¶å®ƒè¯´æ˜ï¼š
+ ******************************************************/
+Mat MyClass::getRotate(Mat image, double angle){
+    IplImage imgTmp = image;
+    IplImage *img = cvCloneImage(&imgTmp);
+    double a = sin(angle), b = cos(angle);
+    int width = img->width, height = img->height;
+    //æ—‹è½¬åçš„æ–°å›¾å°ºå¯¸   
+    int width_rotate = int(height * fabs(a) + width * fabs(b));
+    int height_rotate = int(width * fabs(a) + height * fabs(b));
+    IplImage* img_rotate = cvCreateImage(cvSize(width_rotate, height_rotate), img->depth, img->nChannels);
+    cvZero(img_rotate);
+    //ä¿è¯åŸå›¾å¯ä»¥ä»»æ„è§’åº¦æ—‹è½¬çš„æœ€å°å°ºå¯¸    
+    int tempLength = sqrt((double)width * width + (double)height *height) + 10;
+    int tempX = (tempLength + 1) / 2 - width / 2;
+    int tempY = (tempLength + 1) / 2 - height / 2;
+    IplImage* temp = cvCreateImage(cvSize(tempLength, tempLength), img->depth, img->nChannels);
+    cvZero(temp);
+    //å°†åŸå›¾å¤åˆ¶åˆ°ä¸´æ—¶å›¾åƒtmpä¸­å¿ƒ    
+    cvSetImageROI(temp, cvRect(tempX, tempY, width, height));
+    cvCopy(img, temp, NULL);
+    cvResetImageROI(temp);
+    //æ—‹è½¬æ•°ç»„map    
+    // [ m0  m1  m2 ] ===>  [ A11  A12   b1 ]    
+    // [ m3  m4  m5 ] ===>  [ A21  A22   b2 ]    
+    float m[6];
+    int w = temp->width;
+    int h = temp->height;
+    m[0] = b;
+    m[1] = a;
+    m[3] = -m[1];
+    m[4] = m[0];
+    // å°†æ—‹è½¬ä¸­å¿ƒç§»è‡³å›¾åƒä¸­é—´    
+    m[2] = w * 0.5f;
+    m[5] = h * 0.5f;
+    CvMat M = cvMat(2, 3, CV_32F, m);
+    cvGetQuadrangleSubPix(temp, img_rotate, &M);
+    cvReleaseImage(&temp);
+    Mat out=cvarrToMat(img_rotate);
+    return out;
+}
+/******************************************************
+  å‡½æ•°åç§°ï¼š IsCorrect
+  å‡½æ•°åŠŸèƒ½ï¼š æ—‹è½¬ä¿ç•™åŸç”»
+  ä¼ å…¥å‚æ•°ï¼š
+  è¿” å› å€¼ï¼š
+  å»ºç«‹æ—¶é—´ï¼š 2018-05-19
+  ä¿®æ”¹æ—¶é—´ï¼š
+  å»º ç«‹ äººï¼š èŒƒæ³½å
+  ä¿® æ”¹ äººï¼š
+  å…¶å®ƒè¯´æ˜ï¼š
+ ******************************************************/
+bool MyClass::IsCorrect(Point point[]){
+    for (int i = 0; i < 3; i++){
+        if (point[i].x == point[(i + 1) % 3].x&&point[i].y == point[(i + 2) % 3].y)
+            return true;
+        if (point[i].y == point[(i + 1) % 3].y&&point[i].x == point[(i + 2) % 3].x)
+            return true;
+    }
+    return false;
+}
+
+//////////////////////////////////////////
 MyClass::~MyClass()
 {
 }
-/******************************************************
-º¯ÊıÃû³Æ£º Dis_Barcode
-º¯Êı¹¦ÄÜ£º Ê¶±ğÌõĞÎÂëºÍ¶şÎ¬Âë
-´«Èë²ÎÊı£º
-·µ »Ø Öµ£º
-½¨Á¢Ê±¼ä£º 2018-05-19
-ĞŞ¸ÄÊ±¼ä£º
-½¨ Á¢ ÈË£º ·¶Ôó»ª
-ĞŞ ¸Ä ÈË£º
-ÆäËüËµÃ÷£ºÕâÀïÊÇ½è¼øÆäËûÈËµÄ´úÂë£º
-Ô­ÎÄÁ´½Ó£ºhttps://www.cnblogs.com/dengxiaojun/p/5278679.html
-ÒÔÏÂ´úÂëÊÇ¾­¹ı¸Ä¶¯µÄ
-******************************************************/
-void MyClass::Dis_code(Mat image){
-	Mat imageGray;  // Ëù×ª»¯³ÉµÄ»Ò¶ÈÍ¼Ïñ 
-	//¶¨ÒåÒ»¸öÉ¨ÃèÒÇ  
-	ImageScanner scanner;
-	scanner.set_config(ZBAR_NONE, ZBAR_CFG_ENABLE, 1);
 
-	cvtColor(image, imageGray, CV_RGB2GRAY);
-	imshow("»Ò¶ÈÍ¼", imageGray);
-	// »ñÈ¡ËùÉãÈ¡Í¼ÏñµÄ³¤ºÍ¿í  
-	int width = imageGray.cols;
-	int height = imageGray.rows;
-	// ÔÚZbarÖĞ½øĞĞÉ¨ÃèÊ±ºò£¬ĞèÒª½«OpenCVÖĞµÄMatÀàĞÍ×ª»»Îª£¨uchar *£©ÀàĞÍ£¬rawÖĞ´æ·ÅµÄÊÇÍ¼ÏñµÄµØÖ·£»¶ÔÓ¦µÄÍ¼ÏñĞèÒª×ª³ÉZbarÖĞ¶ÔÓ¦µÄÍ¼Ïñzbar::Image  
-	uchar *raw = (uchar *)imageGray.data;
-	Image imageZbar(width, height, "Y800", raw, width * height);
-	// É¨ÃèÏàÓ¦µÄÍ¼ÏñimageZbar(imageZbarÊÇzbar::ImageÀàĞÍ£¬´æ´¢×Å¶ÁÈëµÄÍ¼Ïñ)  
-	scanner.scan(imageZbar); //É¨ÃèÌõÂë      
-	Image::SymbolIterator symbol = imageZbar.symbol_begin();
-	if (imageZbar.symbol_begin() == imageZbar.symbol_end())
-	{
-		cout << "²éÑ¯ÌõÂëÊ§°Ü£¬Çë¼ì²éÍ¼Æ¬£¡" << endl;
-	}
-	for (; symbol != imageZbar.symbol_end(); ++symbol)
-	{
-		cout << "ÀàĞÍ£º" << endl << symbol->get_type_name() << endl << endl;
-		cout << "ÌõÂë£º" << endl << symbol->get_data() << endl << endl;
-	}
+MyClass::MyClass(char* argv)
+{
+    srcimage = imread(argv);
+    if (srcimage.empty()){
+        printf("file[%s] no exist.\n", argv);
+        exit(1);
+    }
 
-	waitKey(); // µÈ´ı°´ÏÂesc¼ü£¬ÈôĞèÒªÑÓÊ±1sÔò¸ÄÓÃwaitKey(1000);  
+    printf("01 cols=%d, rows=%d\n", srcimage.cols, srcimage.rows);
+    resize(srcimage, srcimage, Size(500, 500));
+    printf("02 cols=%d, rows=%d\n", srcimage.cols, srcimage.rows);
 
-	// ½«Í¼ÏñÖĞµÄÊı¾İÖÃÎª0  
-	imageZbar.set_data(NULL, 0);
-	system("pause");
+    /*
+     * 
+     */
+    element = getStructuringElement(MORPH_RECT, Size(7, 7));
 }
-/******************************************************
-º¯ÊıÃû³Æ£º Run
-º¯Êı¹¦ÄÜ£º ¿ªÊ¼
-´«Èë²ÎÊı£º
-·µ »Ø Öµ£º
-½¨Á¢Ê±¼ä£º 2018-05-19
-ĞŞ¸ÄÊ±¼ä£º
-½¨ Á¢ ÈË£º ·¶Ôó»ª
-ĞŞ ¸Ä ÈË£º
-ÆäËüËµÃ÷£º
-******************************************************/
+
 void MyClass::Run(){
-	Mat image;
-	image = getGray(srcimage,true);//»ñÈ¡»Ò¶ÈÍ¼
-	image = getGass(image, true);//¸ßË¹Æ½»¬ÂË²¨
-	image = getSobel(image, true);//Sobel x¡ªyÌİ¶È²î
-	image = getBlur(image, true);//¾ùÖµÂË²¨³ı¸ßÆµÔëÉù
-	image = getThold(image, true);//¶şÖµ»¯
-	image = getBys(image, true);//±ÕÔËËã
-	image = getErode(image, true);//¸¯Ê´
-	image = getDilate(image, true);//ÅòÕÍ
-	image = getRect(image, srcimage, true);//»ñÈ¡ROI
-	imshow("×îºóµÄÍ¼", image);
+    Mat image;
+
+    //1. è·å–ç°åº¦å›¾;
+    image = getGray(srcimage, true);
+
+    //2. é«˜æ–¯å¹³æ»‘æ»¤æ³¢;
+    image = getGass(image, true);
+
+    //3. Sobel xâ€•y æ¢¯åº¦å·®;
+    image = getSobel(image, true);
+
+    /*
+     * 4. å‡å€¼æ»¤æ³¢é™¤é«˜é¢‘å™ªå£°;
+     *      this step, you can use the other filters;
+     */
+    image = getBlur(image, true);
+
+    //5. äºŒå€¼åŒ–;
+    image = getThold(image, true);
+
+    //6. é—­è¿ç®—;
+    image = getBys(image, true);
+
+    //7. è…èš€;
+    image = getErode(image, true);
+
+    //8. è†¨èƒ€;
+    image = getDilate(image, true);
+
+    //9. è·å–ROI;
+    image = getRect(image, srcimage, true);
+
+    //10. start Zbar decode;
     Dis_code(image);
-	waitKey();
+
+    waitKey();
 }
-/******************************************************
-º¯ÊıÃû³Æ£º QrRun
-º¯Êı¹¦ÄÜ£º ¿ªÊ¼
-´«Èë²ÎÊı£º
-·µ »Ø Öµ£º
-½¨Á¢Ê±¼ä£º 2018-05-19
-ĞŞ¸ÄÊ±¼ä£º
-½¨ Á¢ ÈË£º ·¶Ôó»ª
-ĞŞ ¸Ä ÈË£º
-ÆäËüËµÃ÷£º
-******************************************************/
-void MyClass::QrRun(){
-	RNG rng(12345);
-	//imshow("Ô­Í¼", srcimage);
-	Mat src_all = srcimage.clone();
-	Mat src_gray;
-	//»Ò¶È´¦Àí
-	src_gray = getBlur(getGray(srcimage));
 
-	Scalar color = Scalar(1, 1, 255);
-	Mat threshold_output;
-	vector<vector<Point> > contours, contours2;
-	vector<Vec4i> hierarchy;
-	Mat drawing = Mat::zeros(srcimage.size(), CV_8UC3);
-	Mat drawing2 = Mat::zeros(srcimage.size(), CV_8UC3);
-	Mat drawingAllContours = Mat::zeros(srcimage.size(), CV_8UC3);
-
-	threshold_output = getThold(src_gray);
-
-	findContours(threshold_output, contours, hierarchy, CV_RETR_TREE, CHAIN_APPROX_NONE, Point(0, 0));
-
-	int c = 0, ic = 0, k = 0, area = 0;
-	// ±ßÔµ¼ì²â 
-	//Í¨¹ıºÚÉ«¶¨Î»½Ç×÷Îª¸¸ÂÖÀª£¬ÓĞÁ½¸ö×ÓÂÖÀªµÄÌØµã£¬É¸Ñ¡³öÈı¸ö¶¨Î»½Ç  
-	int parentIdx = -1;
-	for (int i = 0; i< contours.size(); i++)
-	{
-		//»­³öËùÒÔÂÖÀªÍ¼  
-		drawContours(drawingAllContours, contours, parentIdx, CV_RGB(255, 255, 255), 1, 8);
-		if (hierarchy[i][2] != -1 && ic == 0)
-		{
-			parentIdx = i;
-			ic++;
-		}
-		else if (hierarchy[i][2] != -1)
-		{
-			ic++;
-		}
-		else if (hierarchy[i][2] == -1)
-		{
-			ic = 0;
-			parentIdx = -1;
-		}
-		//ÌØÕ÷ÂÖÀª¼ì²â - ¡·
-		//ÓĞÁ½¸ö×ÓÂÖÀª  
-		if (ic >= 2)
-		{
-			//±£´æÕÒµ½µÄÈı¸öºÚÉ«¶¨Î»½Ç  
-			contours2.push_back(contours[parentIdx]);
-			//»­³öÈı¸öºÚÉ«¶¨Î»½ÇµÄÂÖÀª  
-			drawContours(drawing, contours, parentIdx, CV_RGB(rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255)), 1, 8);
-			ic = 0;
-			parentIdx = -1;
-		}
-	}
-	//ÌáÈ¡ÌØÕ÷µã 
-	//Ìî³äµÄ·½Ê½»­³öºÚÉ«¶¨Î»½ÇµÄÂÖÀª  
-	for (int i = 0; i<contours2.size(); i++)
-		drawContours(drawing2, contours2, i, CV_RGB(rng.uniform(100, 255), rng.uniform(100, 255), rng.uniform(100, 255)), -1, 4, hierarchy[k][2], 0, Point());
-
-	//»ñÈ¡¶¨Î»½ÇµÄÖĞĞÄ×ø±ê  
-	vector<Point> pointfind;
-	for (int i = 0; i<contours2.size(); i++)
-	{
-		pointfind.push_back(Center_cal(contours2, i));
-	}
-	//ÅÅ³ı¸ÉÈÅµã
-	Mat dst;
-	Point point[3]; double angle; Mat rot_mat;
-	///Ñ¡ÔñºÏÊÊµÄµã-ºËĞÄÉ¸Ñ¡
-	if (pointfind.size()>3){
-		double lengthA = 10000000000000000, lengthB = 10000000000000000000;
-		for (int i = 0; i < pointfind.size(); i++){
-			for (int j = 0; j < pointfind.size(); j++){
-				for (int k = 0; k < pointfind.size(); k++){
-					if (i != j&&j != k&&i != k){
-						double dxa, dxb,dya,dyb;
-						double k1, k2, wa, wb;
-						dxa = pointfind[i].x - pointfind[j].x;
-						dxb = pointfind[i].x - pointfind[k].x;
-						dya = pointfind[i].y - pointfind[j].y;
-						dyb = pointfind[i].y - pointfind[k].y;
-						if (dxa == 0 || dxb == 0)continue;
-						k1 = dya/dxa;
-						k2 = dyb/dxb ;
-						wa = sqrt(pow(dya, 2) + pow(dya, 2));
-						wb = sqrt(pow(dyb, 2) + pow(dxb, 2));
-						double anglea = abs(atan(k1) * 180 / CV_PI) + abs(atan(k2) * 180 / CV_PI);
-						if (int(anglea)>=85&&int(anglea)<=95&&wa<=lengthA&&wb<=lengthB){
-							lengthA = wa;
-							lengthB = wb;
-							point[0] = pointfind[i];
-							point[1] = pointfind[j];
-							point[2] = pointfind[k];
-						}
-					}
-				}
-			}
-		}
-	}
-	else{
-		for (int i = 0; i < 3; i++){
-			point[i] = pointfind[i];
-		}
-	}
-	//»æÖÆÖ±½ÇÈı½ÇĞÎ 
-	//¼ÆËãÂÖÀªµÄÃæ»ı£¬¼ÆËã¶¨Î»½ÇµÄÃæ»ı£¬´Ó¶ø¼ÆËã³ö±ß³¤  
-	area = contourArea(contours2[0]);
-	int area_side = cvRound(sqrt(double(area)));
-	for (int i = 0; i < 3; i++){
-		line(drawing2, point[i], point[(i + 1)%3], color, area_side / 2, 8);
-	}
-
-	//¾ÀÕıĞı×ª
-	//ÅĞ¶ÏÊÇ·ñÕı¶Ô
-	if (!IsCorrect(point)){
-	//½øÈëĞŞÕı»·½Ú
-		double angle; Mat rot_mat;
-		int start = 0;
-		for (int i = 0; i < 3; i++){
-			double k1, k2,kk;
-			k1 = (point[i].y - point[(i + 1) % 3].y) / (point[i].x - point[(i + 1) % 3].x);
-			k2 = (point[i].y - point[(i + 2) % 3].y) / (point[i].x - point[(i + 2) % 3].x);
-			kk = k1*k2;
-			if (k1*k2 <0)
-				start = i;
-		}
-		double ax, ay, bx, by;
-		ax = point[(start + 1) % 3].x;
-		ay = point[(start + 1) % 3].y;
-		bx = point[(start + 2) % 3].x;
-		by = point[(start + 2) % 3].y;
-		Point2f center(abs(ax - bx) / 2, abs(ay -by)/ 2);
-		double dy = ay - by;
-		double dx = ax - bx;
-		double k3 = dy / dx;
-		angle =atan(k3) * 180 / CV_PI;//×ª»¯½Ç¶È
-		rot_mat = getRotationMatrix2D(center, angle, 1.0);
-		
-		warpAffine(src_all, dst, rot_mat, src_all.size(), 1, 0, 0);//Ğı×ªÔ­Í¼²é¿´
-		warpAffine(drawing2, drawing2, rot_mat, src_all.size(), 1, 0, 0);//Ğı×ªÁ¬ÏßÍ¼
-		warpAffine(src_all, src_all, rot_mat, src_all.size(), 1, 0, 0);//Ğı×ªÔ­Í¼
-
-		namedWindow("Dst");
-		imshow("Dst", dst);
-	}
-
-	namedWindow("DrawingAllContours");
-	imshow("DrawingAllContours", drawingAllContours);
-
-	namedWindow("Drawing2");
-	imshow("Drawing2", drawing2);
-
-	namedWindow("Drawing");
-	imshow("Drawing", drawing);
-
-	//ÌáÈ¡ROI
-	//½ÓÏÂÀ´Òª¿ò³öÕâÕû¸ö¶şÎ¬Âë  
-	Mat gray_all, threshold_output_all;
-	vector<vector<Point> > contours_all;
-	vector<Vec4i> hierarchy_all;
-	cvtColor(drawing2, gray_all, CV_BGR2GRAY);
-
-
-	threshold(gray_all, threshold_output_all, 45, 255, THRESH_BINARY);
-	findContours(threshold_output_all, contours_all, hierarchy_all, RETR_EXTERNAL, CHAIN_APPROX_NONE, Point(0, 0));//RETR_EXTERNAL±íÊ¾Ö»Ñ°ÕÒ×îÍâ²ãÂÖÀª  
-
-
-	Point2f fourPoint2f[4];
-	//Çó×îĞ¡°üÎ§¾ØĞÎ  
-	RotatedRect rectPoint = minAreaRect(contours_all[1]);//pointfind.size()-3
-
-	//½«rectPoint±äÁ¿ÖĞ´æ´¢µÄ×ø±êÖµ·Åµ½ fourPointµÄÊı×éÖĞ  
-	rectPoint.points(fourPoint2f);
-
-	int maxx = 0, maxy = 0, minx = 100000, miny = 100000;
-	for (int i = 0; i < 4; i++)
-	{
-		if (maxx < fourPoint2f[i].x)maxx = fourPoint2f[i].x;
-		if (maxy < fourPoint2f[i].y)maxy = fourPoint2f[i].y;
-		if (minx > fourPoint2f[i].x)minx = fourPoint2f[i].x;
-		if (miny > fourPoint2f[i].y)miny = fourPoint2f[i].y;
-		line(src_all, fourPoint2f[i % 4], fourPoint2f[(i + 1) % 4]
-			, Scalar(0), 3);
-	}
-	namedWindow("Src_all");
-	///±ß¼Ê´¦Àí
-	int set_inter = 5;
-	while (true)
-	{
-		minx -= set_inter;
-		miny -= set_inter;
-		maxx += set_inter;
-		maxy += set_inter;
-		if (maxx > srcimage.size().width || maxy > srcimage.size().height || minx < 0 || miny < 0){
-			minx += set_inter;
-			miny += set_inter;
-			maxx -= set_inter;
-			maxy -= set_inter;
-			set_inter--;
-		}
-		else
-		{
-			break;
-		}
-	}
-	imshow("Src_all", src_all(Rect(minx, miny, maxx - minx, maxy - miny)));//ROI
-	Mat fout = src_all(Rect(minx, miny, maxx - minx, maxy - miny));//ROI
-
-	//Ê¶±ğ
-    Dis_code(fout);
-
-	waitKey(0);
-	destroyAllWindows();
-}
-/******************************************************
-º¯ÊıÃû³Æ£º getGray
-º¯Êı¹¦ÄÜ£º »Ò¶È´¦Àí
-´«Èë²ÎÊı£º Mat image
-·µ »Ø Öµ£º
-½¨Á¢Ê±¼ä£º 2018-05-19
-ĞŞ¸ÄÊ±¼ä£º
-½¨ Á¢ ÈË£º ·¶Ôó»ª
-ĞŞ ¸Ä ÈË£º
-ÆäËüËµÃ÷£º
-******************************************************/
 Mat MyClass::getGray(Mat image, bool show){
-	Mat cimage;
-	cvtColor(image, cimage, CV_RGBA2GRAY);
-	if (show)
-	imshow("»Ò¶ÈÍ¼", cimage);
-	return cimage;
+    Mat cimage;
+    cvtColor(image, cimage, CV_RGBA2GRAY);
+    if (show)
+        imshow("01, Gray", cimage);
+    return cimage;
 }
-/******************************************************
-º¯ÊıÃû³Æ£º getGass
-º¯Êı¹¦ÄÜ£º ¸ßË¹ÂË²¨´¦Àí
-´«Èë²ÎÊı£º Mat image
-·µ »Ø Öµ£º
-½¨Á¢Ê±¼ä£º 2018-05-19
-ĞŞ¸ÄÊ±¼ä£º
-½¨ Á¢ ÈË£º ·¶Ôó»ª
-ĞŞ ¸Ä ÈË£º
-ÆäËüËµÃ÷£º
-******************************************************/
-Mat MyClass::getGass(Mat image, bool show){
-	Mat cimage;
-	GaussianBlur(image, cimage, Size(3, 3), 0);
-	if (show)
-	imshow("¸ßË¹ÂË²¨Í¼", cimage);
-	return cimage;
-}
-/******************************************************
-º¯ÊıÃû³Æ£º getSobel
-º¯Êı¹¦ÄÜ£º Sobel´¦Àí
-´«Èë²ÎÊı£º Mat image
-·µ »Ø Öµ£º
-½¨Á¢Ê±¼ä£º 2018-05-19
-ĞŞ¸ÄÊ±¼ä£º
-½¨ Á¢ ÈË£º ·¶Ôó»ª
-ĞŞ ¸Ä ÈË£º
-ÆäËüËµÃ÷£º
-******************************************************/
-Mat MyClass::getSobel(Mat image, bool show){
-	Mat cimageX16s, cimageY16s, imageSobelX, imageSobelY, out;
-	Sobel(image, cimageX16s, CV_16S, 1, 0, 3, 1, 0, 4);
-	Sobel(image, cimageY16s, CV_16S, 0, 1, 3, 1, 0, 4);
-	convertScaleAbs(cimageX16s, imageSobelX, 1, 0);
-	convertScaleAbs(cimageY16s, imageSobelY, 1, 0);
-	out = imageSobelX - imageSobelY;
-	if (show)
-	imshow("Sobelx-y²î Í¼", out);
-	return out;
-}
-/******************************************************
-º¯ÊıÃû³Æ£º getThold
-º¯Êı¹¦ÄÜ£º ¶şÖµ»¯´¦Àí
-´«Èë²ÎÊı£º Mat image
-·µ »Ø Öµ£º
-½¨Á¢Ê±¼ä£º 2018-05-19
-ĞŞ¸ÄÊ±¼ä£º
-½¨ Á¢ ÈË£º ·¶Ôó»ª
-ĞŞ ¸Ä ÈË£º
-ÆäËüËµÃ÷£º
-******************************************************/
-Mat MyClass::getThold(Mat image, bool show){
-	Mat cimage;
-	threshold(image, cimage, 112, 255, CV_THRESH_BINARY);
-	if (show)
-	imshow("¶şÖµ»¯Í¼", cimage);
-	return cimage;
-}
-/******************************************************
-º¯ÊıÃû³Æ£º getBys
-º¯Êı¹¦ÄÜ£º ±ÕÔËËã´¦Àí
-´«Èë²ÎÊı£º Mat image
-·µ »Ø Öµ£º
-½¨Á¢Ê±¼ä£º 2018-05-19
-ĞŞ¸ÄÊ±¼ä£º
-½¨ Á¢ ÈË£º ·¶Ôó»ª
-ĞŞ ¸Ä ÈË£º
-ÆäËüËµÃ÷£º
-******************************************************/
-Mat MyClass::getBys(Mat image, bool show){
-	morphologyEx(image, image, MORPH_CLOSE, element);
-	if (show)
-	imshow("±ÕÔËËãÍ¼", image);
-	return image;
-}
-/******************************************************
-º¯ÊıÃû³Æ£º getBlur
-º¯Êı¹¦ÄÜ£º ¾ùÖµÂË²¨´¦Àí
-´«Èë²ÎÊı£º Mat image
-·µ »Ø Öµ£º
-½¨Á¢Ê±¼ä£º 2018-05-19
-ĞŞ¸ÄÊ±¼ä£º
-½¨ Á¢ ÈË£º ·¶Ôó»ª
-ĞŞ ¸Ä ÈË£º
-ÆäËüËµÃ÷£º
-******************************************************/
-Mat MyClass::getBlur(Mat image, bool show){
-	Mat cimage;
-	blur(image, cimage, Size(3, 3));
-	if (show)
-	imshow("¾ùÖµÂË²¨Í¼", cimage);
-	return cimage;
-}
-/******************************************************
-º¯ÊıÃû³Æ£º getErode
-º¯Êı¹¦ÄÜ£º ¸¯Ê´´¦Àí
-´«Èë²ÎÊı£º Mat image
-·µ »Ø Öµ£º
-½¨Á¢Ê±¼ä£º 2018-05-19
-ĞŞ¸ÄÊ±¼ä£º
-½¨ Á¢ ÈË£º ·¶Ôó»ª
-ĞŞ ¸Ä ÈË£º
-ÆäËüËµÃ÷£º
-******************************************************/
-Mat MyClass::getErode(Mat image, bool show){
-	//Mat cimage;
-	erode(image, image, element);
-	if (show)
-	imshow("¸¯Ê´Í¼", image);
-	return image;
-}
-/******************************************************
-º¯ÊıÃû³Æ£º getDilate
-º¯Êı¹¦ÄÜ£º ÅòÕÍ´¦Àí
-´«Èë²ÎÊı£º Mat image
-·µ »Ø Öµ£º
-½¨Á¢Ê±¼ä£º 2018-05-19
-ĞŞ¸ÄÊ±¼ä£º
-½¨ Á¢ ÈË£º ·¶Ôó»ª
-ĞŞ ¸Ä ÈË£º
-ÆäËüËµÃ÷£º
-******************************************************/
-Mat MyClass::getDilate(Mat image, bool show){
-	for (int i = 0; i < 3; i++)
-		dilate(image, image, element);
-	if (show)
-	imshow("ÅòÕÍÍ¼", image);
-	return image;
-}
-/******************************************************
-º¯ÊıÃû³Æ£º getRect
-º¯Êı¹¦ÄÜ£º »ñÈ¡ÂëµÄÇøÓò
-´«Èë²ÎÊı£º Mat image£¬ Mat simageÔ­Í¼
-·µ »Ø Öµ£º
-½¨Á¢Ê±¼ä£º 2018-05-19
-ĞŞ¸ÄÊ±¼ä£º
-½¨ Á¢ ÈË£º ·¶Ôó»ª
-ĞŞ ¸Ä ÈË£º
-ÆäËüËµÃ÷£º
-******************************************************/
-Mat MyClass::getRect(Mat image, Mat simage, bool show){
-	vector<vector<Point> > contours;
-	vector<Vec4i> hiera;
-	Mat cimage;
-	findContours(image, contours, hiera, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE);
-	vector<float>contourArea;
-	for (int i = 0; i < contours.size(); i++)
-	{
-		contourArea.push_back(cv::contourArea(contours[i]));
-	}
-	//ÕÒ³öÃæ»ı×î´óµÄÂÖÀª
-	double maxValue; Point maxLoc;
-	minMaxLoc(contourArea, NULL, &maxValue, NULL, &maxLoc);
-	//¼ÆËãÃæ»ı×î´óµÄÂÖÀªµÄ×îĞ¡µÄÍâ°ü¾ØĞÎ
-	RotatedRect minRect = minAreaRect(contours[maxLoc.x]);
-	//ÎªÁË·ÀÖ¹ÕÒ´í,Òª¼ì²éÕâ¸ö¾ØĞÎµÄÆ«Ğ±½Ç¶È²»ÄÜ³¬±ê
-	//Èç¹û³¬±ê,ÄÇ¾ÍÊÇÃ»ÕÒµ½
-	if (minRect.angle<2.0)
-	{
-		//ÕÒµ½ÁË¾ØĞÎµÄ½Ç¶È,µ«ÊÇÕâÊÇÒ»¸öĞı×ª¾ØĞÎ,ËùÒÔ»¹ÒªÖØĞÂ»ñµÃÒ»¸öÍâ°ü×îĞ¡¾ØĞÎ
-		Rect myRect = boundingRect(contours[maxLoc.x]);
-		//°ÑÕâ¸ö¾ØĞÎÔÚÔ´Í¼ÏñÖĞ»­³öÀ´
-		//rectangle(srcImage,myRect,Scalar(0,255,255),3,LINE_AA);
-		//¿´¿´ÏÔÊ¾Ğ§¹û,ÕÒµÄ¶Ô²»¶Ô
-		//imshow(windowNameString,srcImage);
-		//½«É¨ÃèµÄÍ¼Ïñ²Ã¼ôÏÂÀ´,²¢±£´æÎªÏàÓ¦µÄ½á¹û,±£ÁôÒ»Ğ©X·½ÏòµÄ±ß½ç,ËùÒÔ¶Ôrect½øĞĞÒ»¶¨µÄÀ©ÕÅ
-		myRect.x = myRect.x - (myRect.width / 20);
-		myRect.width = myRect.width*1.1;
-		Mat resultImage = Mat(srcimage, myRect);
-		return resultImage;
-	}
 
-	for (int i = 0; i<contours.size(); i++)
-	{
-		Rect rect = boundingRect((Mat)contours[i]);
-		//cimage = simage(rect);
-	    rectangle(simage, rect, Scalar(0), 2);
-		if (show)
-		imshow("×ª±äÍ¼", simage);
-	}
-	return simage;
+Mat MyClass::getGass(Mat image, bool show){
+    Mat cimage;
+    GaussianBlur(image, cimage, Size(3, 3), 0);
+    if (show)
+        imshow("2. Gauss filter", cimage);
+    return cimage;
 }
-/******************************************************
-º¯ÊıÃû³Æ£º getRect
-º¯Êı¹¦ÄÜ£º »ñÈ¡ÂÖÀªµÄÖĞĞÄµã
-´«Èë²ÎÊı£º vector<vector<Point> > contours, int i
-·µ »Ø Öµ£º
-½¨Á¢Ê±¼ä£º 2018-05-19
-ĞŞ¸ÄÊ±¼ä£º
-½¨ Á¢ ÈË£º ·¶Ôó»ª
-ĞŞ ¸Ä ÈË£º
-ÆäËüËµÃ÷£º
-******************************************************/
-Point MyClass::Center_cal(vector<vector<Point> > contours, int i)
+
+Mat MyClass::getSobel(Mat image, bool show){
+    Mat cimageX16s, cimageY16s, imageSobelX, imageSobelY, out;
+
+#if 1
+    //zgj, why use this CV_16S ? 
+    Sobel(image, cimageX16s, CV_16S, 1, 0, 3, 1, 0, 4);
+    Sobel(image, cimageY16s, CV_16S, 0, 1, 3, 1, 0, 4);
+#else
+    Sobel(image, cimageX16s, -1, 1, 0, 3, 1, 0, 4);
+    Sobel(image, cimageY16s, -1, 0, 1, 3, 1, 0, 4);
+#endif 
+    convertScaleAbs(cimageX16s, imageSobelX, 1, 0);
+    convertScaleAbs(cimageY16s, imageSobelY, 1, 0);
+
+#if 1
+    //if the codebar is standard and horizontal, the effect is ok.
+    out = imageSobelX - imageSobelY;
+#else
+    //out = imageSobelX;
+    out = imageSobelY;
+#endif
+    if (show)
+        imshow("3. Sobel x-y", out);
+
+    return out;
+}
+
+Mat MyClass::getBlur(Mat image, bool show){
+    Mat cimage;
+    blur(image, cimage, Size(3, 3));
+    if (show)
+        imshow("4. Blur filter", cimage);
+    return cimage;
+}
+
+Mat MyClass::getThold(Mat image, bool show){
+    Mat cimage;
+    //zgj, the thres is ?
+    threshold(image, cimage, 112, 255, CV_THRESH_BINARY);
+    if (show)
+        imshow("5. thres", cimage);
+    return cimage;
+}
+
+Mat MyClass::getBys(Mat image, bool show){
+    morphologyEx(image, image, MORPH_CLOSE, element);
+    if (show)
+        imshow("6. close", image);
+    return image;
+}
+
+Mat MyClass::getErode(Mat image, bool show){
+    erode(image, image, element);
+    if (show)
+        imshow("7. erode", image);
+    return image;
+}
+
+Mat MyClass::getDilate(Mat image, bool show){
+    for (int i = 0; i < 3; i++){
+        dilate(image, image, element);
+    }
+
+    if (show)
+        imshow("8. dilate", image);
+    return image;
+}
+
+Mat MyClass::getRect(Mat image, Mat simage, bool show){
+    vector<vector<Point> > contours;
+    vector<Vec4i> hiera;
+    Mat cimage;
+
+    /*
+     * 1. æŸ¥æ‰¾ç‰©ä½“çš„è½®å»“;
+     */
+    findContours(image, contours, hiera, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE);
+
+    /*
+     * 2. è®¡ç®— æ¯ä¸€ä¸ªè½®å»“çš„é¢ç§¯;
+     */
+    vector<float> saveAllContourArea;
+    for (int i = 0; i < contours.size(); i++)
+    {
+        saveAllContourArea.push_back(cv::contourArea(contours[i]));
+    }
+
+    /*
+     * 3. æ‰¾å‡ºé¢ç§¯æœ€å¤§çš„è½®å»“;
+     */
+    double maxValue; Point maxLoc;
+    minMaxLoc(saveAllContourArea, NULL, &maxValue, NULL, &maxLoc);
+
+    /*
+     * 4. è®¡ç®—é¢ç§¯æœ€å¤§çš„è½®å»“çš„æœ€å°çš„å¤–åŒ…çŸ©å½¢
+     */
+    RotatedRect minRect = minAreaRect(contours[maxLoc.x]);
+    printf("angle=%f\n", minRect.angle);
+
+    //ä¸ºäº†é˜²æ­¢æ‰¾é”™,è¦æ£€æŸ¥è¿™ä¸ªçŸ©å½¢çš„åæ–œè§’åº¦ä¸èƒ½è¶…æ ‡
+    //å¦‚æœè¶…æ ‡, é‚£å°±æ˜¯æ²¡æ‰¾åˆ°;
+    if (minRect.angle < 2.0)
+    {
+        //æ‰¾åˆ°äº†çŸ©å½¢çš„è§’åº¦, ä½†æ˜¯è¿™æ˜¯ä¸€ä¸ªæ—‹è½¬çŸ©å½¢, æ‰€ä»¥è¿˜è¦é‡æ–°è·å¾—ä¸€ä¸ªå¤–åŒ…æœ€å°çŸ©å½¢
+        Rect myRect = boundingRect(contours[maxLoc.x]);
+#if 0
+        //æŠŠè¿™ä¸ªçŸ©å½¢åœ¨æºå›¾åƒä¸­ç”»å‡ºæ¥
+        rectangle(srcimage, myRect, Scalar(0,255,255), 3, LINE_AA);
+
+        //çœ‹çœ‹æ˜¾ç¤ºæ•ˆæœ,æ‰¾çš„å¯¹ä¸å¯¹
+        imshow("find Rect", srcimage);
+
+        waitKey(0);
+#endif
+        /*
+         * å°†æ‰«æçš„å›¾åƒè£å‰ªä¸‹æ¥, å¹¶ä¿å­˜ä¸ºç›¸åº”çš„ç»“æœ, ç”¨æ¥è§£ç ;
+         *     ä¿ç•™ä¸€äº›Xæ–¹å‘çš„è¾¹ç•Œ, å¯¹rectè¿›è¡Œä¸€å®šçš„æ‰©å¼ ;
+         */
+        myRect.x = myRect.x - (myRect.width / 20);
+        myRect.width = myRect.width*1.1;
+        Mat resultImage = Mat(srcimage, myRect);
+
+        if (show)
+            imshow("9. Cut Rect", resultImage);
+
+        return resultImage;
+    }
+
+    for (int i = 0; i<contours.size(); i++)
+    {
+        Rect rect = boundingRect((Mat)contours[i]);
+        //cimage = simage(rect);
+        rectangle(simage, rect, Scalar(0), 2);
+        if (show)
+            imshow("è½¬å˜å›¾", simage);
+    }
+
+    return simage;
+}
+
+void MyClass::Dis_code(Mat image){
+    //å®šä¹‰ä¸€ä¸ªæ‰«æä»ª  
+    ImageScanner scanner;
+    scanner.set_config(ZBAR_NONE, ZBAR_CFG_ENABLE, 1);
+
+    // æ‰€è½¬åŒ–æˆçš„ç°åº¦å›¾åƒ 
+    Mat imageGray;
+
+    cvtColor(image, imageGray, CV_RGB2GRAY);
+    imshow("10. ç°åº¦å›¾", imageGray);
+
+    // è·å–æ‰€æ‘„å–å›¾åƒçš„é•¿å’Œå®½  
+    int width = imageGray.cols;
+    int height = imageGray.rows;
+    /*
+     * åœ¨Zbarä¸­è¿›è¡Œæ‰«ææ—¶å€™ï¼Œéœ€è¦å°†OpenCVä¸­çš„Matç±»å‹è½¬æ¢ä¸ºï¼ˆuchar *ï¼‰ç±»å‹,
+     *     rawä¸­å­˜æ”¾çš„æ˜¯å›¾åƒçš„åœ°å€; å¯¹åº”çš„å›¾åƒéœ€è¦è½¬æˆZbarä¸­å¯¹åº”çš„å›¾åƒzbar::Image  
+     */
+    uchar *raw = (uchar *)imageGray.data;
+    Image imageZbar(width, height, "Y800", raw, width * height);
+
+    // æ‰«æç›¸åº”çš„å›¾åƒimageZbar(imageZbaræ˜¯zbar::Imageç±»å‹ï¼Œå­˜å‚¨ç€è¯»å…¥çš„å›¾åƒ)  
+    scanner.scan(imageZbar); //æ‰«ææ¡ç       
+    Image::SymbolIterator symbol = imageZbar.symbol_begin();
+    if (imageZbar.symbol_begin() == imageZbar.symbol_end())
+    {
+        cout << "æŸ¥è¯¢æ¡ç å¤±è´¥ï¼Œè¯·æ£€æŸ¥å›¾ç‰‡ï¼" << endl;
+    }
+    for (; symbol != imageZbar.symbol_end(); ++symbol)
+    {
+        cout << "ç±»å‹ï¼š" << endl << symbol->get_type_name() << endl << endl;
+        cout << "æ¡ç ï¼š" << endl << symbol->get_data() << endl << endl;
+    }
+
+    //ç­‰å¾…æŒ‰ä¸‹;
+    waitKey();
+
+    // å°†å›¾åƒä¸­çš„æ•°æ®ç½®ä¸º0  
+    imageZbar.set_data(NULL, 0);
+}
+
+//////////////////////////////////////////
+int main(int argc, char ** argv)
 {
-	int centerx = 0, centery = 0, n = contours[i].size();
-	//ÔÚÌáÈ¡µÄĞ¡Õı·½ĞÎµÄ±ß½çÉÏÃ¿¸ôÖÜ³¤¸öÏñËØÌáÈ¡Ò»¸öµãµÄ×ø±ê£¬  
-	//ÇóËùÌáÈ¡ËÄ¸öµãµÄÆ½¾ù×ø±ê£¨¼´ÎªĞ¡Õı·½ĞÎµÄ´óÖÂÖĞĞÄ£©  
-	centerx = (contours[i][n / 4].x + contours[i][n * 2 / 4].x + contours[i][3 * n / 4].x + contours[i][n - 1].x) / 4;
-	centery = (contours[i][n / 4].y + contours[i][n * 2 / 4].y + contours[i][3 * n / 4].y + contours[i][n - 1].y) / 4;
-	Point point1 = Point(centerx, centery);
-	return point1;
+    if (argc < 2){
+        MyClass *myclass = new MyClass();
+        myclass->QrRun();
+        delete myclass;
+    }
+    else
+    {
+        MyClass *myclass = new MyClass(argv[1]);
+        myclass->Run();
+        //myclass->QrRun();
+        delete myclass;
+    }
+    return 0;
 }
-/******************************************************
-º¯ÊıÃû³Æ£º getRotate
-º¯Êı¹¦ÄÜ£º Ğı×ª±£ÁôÔ­»­
-´«Èë²ÎÊı£º 
-·µ »Ø Öµ£º
-½¨Á¢Ê±¼ä£º 2018-05-19
-ĞŞ¸ÄÊ±¼ä£º
-½¨ Á¢ ÈË£º ·¶Ôó»ª
-ĞŞ ¸Ä ÈË£º
-ÆäËüËµÃ÷£º
-******************************************************/
-Mat MyClass::getRotate(Mat image, double angle){
-	IplImage imgTmp = image;
-	IplImage *img = cvCloneImage(&imgTmp);
-	double a = sin(angle), b = cos(angle);
-	int width = img->width, height = img->height;
-	//Ğı×ªºóµÄĞÂÍ¼³ß´ç   
-	int width_rotate = int(height * fabs(a) + width * fabs(b));
-	int height_rotate = int(width * fabs(a) + height * fabs(b));
-	IplImage* img_rotate = cvCreateImage(cvSize(width_rotate, height_rotate), img->depth, img->nChannels);
-	cvZero(img_rotate);
-	//±£Ö¤Ô­Í¼¿ÉÒÔÈÎÒâ½Ç¶ÈĞı×ªµÄ×îĞ¡³ß´ç    
-	int tempLength = sqrt((double)width * width + (double)height *height) + 10;
-	int tempX = (tempLength + 1) / 2 - width / 2;
-	int tempY = (tempLength + 1) / 2 - height / 2;
-	IplImage* temp = cvCreateImage(cvSize(tempLength, tempLength), img->depth, img->nChannels);
-	cvZero(temp);
-	//½«Ô­Í¼¸´ÖÆµ½ÁÙÊ±Í¼ÏñtmpÖĞĞÄ    
-	cvSetImageROI(temp, cvRect(tempX, tempY, width, height));
-	cvCopy(img, temp, NULL);
-	cvResetImageROI(temp);
-	//Ğı×ªÊı×émap    
-	// [ m0  m1  m2 ] ===>  [ A11  A12   b1 ]    
-	// [ m3  m4  m5 ] ===>  [ A21  A22   b2 ]    
-	float m[6];
-	int w = temp->width;
-	int h = temp->height;
-	m[0] = b;
-	m[1] = a;
-	m[3] = -m[1];
-	m[4] = m[0];
-	// ½«Ğı×ªÖĞĞÄÒÆÖÁÍ¼ÏñÖĞ¼ä    
-	m[2] = w * 0.5f;
-	m[5] = h * 0.5f;
-	CvMat M = cvMat(2, 3, CV_32F, m);
-	cvGetQuadrangleSubPix(temp, img_rotate, &M);
-	cvReleaseImage(&temp);
-	Mat out=cvarrToMat(img_rotate);
-	return out;
-}
-/******************************************************
-º¯ÊıÃû³Æ£º IsCorrect
-º¯Êı¹¦ÄÜ£º Ğı×ª±£ÁôÔ­»­
-´«Èë²ÎÊı£º
-·µ »Ø Öµ£º
-½¨Á¢Ê±¼ä£º 2018-05-19
-ĞŞ¸ÄÊ±¼ä£º
-½¨ Á¢ ÈË£º ·¶Ôó»ª
-ĞŞ ¸Ä ÈË£º
-ÆäËüËµÃ÷£º
-******************************************************/
-bool MyClass::IsCorrect(Point point[]){
-	for (int i = 0; i < 3; i++){
-		if (point[i].x == point[(i + 1) % 3].x&&point[i].y == point[(i + 2) % 3].y)
-			return true;
-		if (point[i].y == point[(i + 1) % 3].y&&point[i].x == point[(i + 2) % 3].x)
-			return true;
-	}
-	return false;
-}
-int main(int argc, char *argv)
-{
-	if (argc < 2){
-		MyClass *myclass = new MyClass();
-		//myclass->Run();
-		myclass->QrRun();
-		delete myclass;
-	}
-	else
-	{
-		MyClass *myclass = new MyClass(argv);
-		myclass->Run();
-		myclass->QrRun();
-		delete myclass;
-	}
-	return 0;
-}
+
