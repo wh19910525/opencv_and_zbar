@@ -48,6 +48,7 @@ public:
     void set_img_name(char * name);
 private:
     char img_name[NAME_LEN];
+    char decode_filename[NAME_LEN];
     int show_img_num;
     Mat srcimage;//原图
     Mat element;//核

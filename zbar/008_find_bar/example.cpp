@@ -334,11 +334,11 @@ MyClass::~MyClass()
 {
 }
 
-MyClass::MyClass(char* argv)
+MyClass::MyClass(char* filename)
 {
-    srcimage = imread(argv);
+    srcimage = imread(filename);
     if (srcimage.empty()){
-        printf("file[%s] no exist.\n", argv);
+        printf("file[%s] no exist.\n", filename);
         exit(1);
     }
 
@@ -351,6 +351,9 @@ MyClass::MyClass(char* argv)
      */
     element = getStructuringElement(MORPH_RECT, Size(7, 7));
     show_img_num = 1;
+
+    memset(decode_filename, 0, NAME_LEN);
+    memcpy(decode_filename, filename, strlen(filename));
 }
 
 void MyClass::Run(){
@@ -602,17 +605,19 @@ void MyClass::Dis_code(Mat image, bool show){
     uchar *raw = (uchar *)imageGray.data;
     Image imageZbar(width, height, "Y800", raw, width * height);
 
+    cout << " file : " << decode_filename << endl;
+
     // 扫描相应的图像imageZbar(imageZbar是zbar::Image类型，存储着读入的图像)  
     scanner.scan(imageZbar); //扫描条码      
     Image::SymbolIterator symbol = imageZbar.symbol_begin();
     if (imageZbar.symbol_begin() == imageZbar.symbol_end())
     {
-        cout << "查询条码失败，请检查图片！" << endl;
+        cout << "    失败, 请检查图片！" << endl;
     }
     for (; symbol != imageZbar.symbol_end(); ++symbol)
     {
-        cout << "类型：" << endl << symbol->get_type_name() << endl << endl;
-        cout << "条码：" << endl << symbol->get_data() << endl << endl;
+        cout << "    类型：" << symbol->get_type_name() << endl;
+        cout << "    条码：" << symbol->get_data() << endl;
     }
 
     //等待按下;
