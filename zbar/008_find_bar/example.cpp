@@ -232,7 +232,7 @@ void MyClass::QrRun(){
     Mat fout = src_all(Rect(minx, miny, maxx - minx, maxy - miny));//ROI
 
     //识别
-    Dis_code(fout);
+    Dis_code(fout, true);
 
     waitKey(0);
     destroyAllWindows();
@@ -350,6 +350,7 @@ MyClass::MyClass(char* argv)
      * 
      */
     element = getStructuringElement(MORPH_RECT, Size(7, 7));
+    show_img_num = 1;
 }
 
 void MyClass::Run(){
@@ -386,24 +387,34 @@ void MyClass::Run(){
     image = getRect(image, srcimage, true);
 
     //10. start Zbar decode;
-    Dis_code(image);
+    Dis_code(image, true);
 
     waitKey();
+}
+
+void MyClass::set_img_name(char * name){
+    memset(img_name, 0, NAME_LEN);
+    sprintf(img_name, "%02d, %s", show_img_num++, name);
 }
 
 Mat MyClass::getGray(Mat image, bool show){
     Mat cimage;
     cvtColor(image, cimage, CV_RGBA2GRAY);
-    if (show)
-        imshow("01, Gray", cimage);
+    if (show){
+        set_img_name("Gary");
+        imshow(img_name, cimage);
+    }
     return cimage;
 }
 
 Mat MyClass::getGass(Mat image, bool show){
     Mat cimage;
     GaussianBlur(image, cimage, Size(3, 3), 0);
-    if (show)
-        imshow("2. Gauss filter", cimage);
+    if (show){
+        set_img_name("Gaussian filter");
+        imshow(img_name, cimage);
+    }
+
     return cimage;
 }
 
@@ -428,8 +439,10 @@ Mat MyClass::getSobel(Mat image, bool show){
     //out = imageSobelX;
     out = imageSobelY;
 #endif
-    if (show)
-        imshow("3. Sobel x-y", out);
+    if (show){
+        set_img_name("Sobel x-y");
+        imshow(img_name, out);
+    }
 
     return out;
 }
@@ -437,8 +450,11 @@ Mat MyClass::getSobel(Mat image, bool show){
 Mat MyClass::getBlur(Mat image, bool show){
     Mat cimage;
     blur(image, cimage, Size(3, 3));
-    if (show)
-        imshow("4. Blur filter", cimage);
+    if (show){
+        set_img_name("Blur filter");
+        imshow(img_name, cimage);
+    }
+
     return cimage;
 }
 
@@ -446,22 +462,31 @@ Mat MyClass::getThold(Mat image, bool show){
     Mat cimage;
     //zgj, the thres is ?
     threshold(image, cimage, 112, 255, CV_THRESH_BINARY);
-    if (show)
-        imshow("5. thres", cimage);
+    if (show){
+        set_img_name("Thres-hold");
+        imshow(img_name, cimage);
+    }
+
     return cimage;
 }
 
 Mat MyClass::getBys(Mat image, bool show){
     morphologyEx(image, image, MORPH_CLOSE, element);
-    if (show)
-        imshow("6. close", image);
+    if (show){
+        set_img_name("Close");
+        imshow(img_name, image);
+    }
+
     return image;
 }
 
 Mat MyClass::getErode(Mat image, bool show){
     erode(image, image, element);
-    if (show)
-        imshow("7. erode", image);
+    if (show){
+        set_img_name("Erode");
+        imshow(img_name, image);
+    }
+
     return image;
 }
 
@@ -470,8 +495,11 @@ Mat MyClass::getDilate(Mat image, bool show){
         dilate(image, image, element);
     }
 
-    if (show)
-        imshow("8. dilate", image);
+    if (show){
+        set_img_name("Dilate");
+        imshow(img_name, image);
+    }
+
     return image;
 }
 
@@ -529,8 +557,10 @@ Mat MyClass::getRect(Mat image, Mat simage, bool show){
         myRect.width = myRect.width*1.1;
         Mat resultImage = Mat(srcimage, myRect);
 
-        if (show)
-            imshow("9. Cut Rect", resultImage);
+        if (show){
+            set_img_name("Cut Src Rect");
+            imshow(img_name, resultImage);
+        }
 
         return resultImage;
     }
@@ -547,7 +577,7 @@ Mat MyClass::getRect(Mat image, Mat simage, bool show){
     return simage;
 }
 
-void MyClass::Dis_code(Mat image){
+void MyClass::Dis_code(Mat image, bool show){
     //定义一个扫描仪  
     ImageScanner scanner;
     scanner.set_config(ZBAR_NONE, ZBAR_CFG_ENABLE, 1);
@@ -556,7 +586,11 @@ void MyClass::Dis_code(Mat image){
     Mat imageGray;
 
     cvtColor(image, imageGray, CV_RGB2GRAY);
-    imshow("10. 灰度图", imageGray);
+
+    if (show){
+        set_img_name("Decode img");
+        imshow(img_name, imageGray);
+    }
 
     // 获取所摄取图像的长和宽  
     int width = imageGray.cols;
