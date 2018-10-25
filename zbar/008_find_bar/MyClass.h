@@ -35,11 +35,11 @@ public:
 
     Mat getThold(Mat image, bool show = false);//二值化
 
-    Mat getBys(Mat image, bool show = false);//闭运算
+    Mat getBys(Mat image, bool show = false, int times = 1);//闭运算
 
-    Mat getErode(Mat image, bool show = false);//腐蚀
+    Mat getErode(Mat image, bool show = false, int times = 1);//腐蚀
 
-    Mat getDilate(Mat image, bool show = false);//膨胀
+    Mat getDilate(Mat image, bool show = false, int times = 1);//膨胀
 
     Mat getRect(Mat image, Mat simage, bool show = false);//获取范围
 

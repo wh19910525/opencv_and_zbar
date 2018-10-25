@@ -378,13 +378,13 @@ void MyClass::Run(){
     image = getThold(image, true);
 
     //6. 闭运算;
-    image = getBys(image, true);
+    image = getBys(image, true, 1);
 
     //7. 腐蚀;
-    image = getErode(image, true);
+    image = getErode(image, true, 1);
 
     //8. 膨胀;
-    image = getDilate(image, true);
+    image = getDilate(image, true, 3);
 
     //9. 获取ROI;
     image = getRect(image, srcimage, true);
@@ -397,7 +397,7 @@ void MyClass::Run(){
 
 void MyClass::set_img_name(char * name){
     memset(img_name, 0, NAME_LEN);
-    sprintf(img_name, "%02d, %s", show_img_num++, name);
+    sprintf(img_name, "%02d. %s", show_img_num++, name);
 }
 
 Mat MyClass::getGray(Mat image, bool show){
@@ -473,8 +473,10 @@ Mat MyClass::getThold(Mat image, bool show){
     return cimage;
 }
 
-Mat MyClass::getBys(Mat image, bool show){
-    morphologyEx(image, image, MORPH_CLOSE, element);
+Mat MyClass::getBys(Mat image, bool show, int times){
+    for (int i = 0; i < times; i++){
+        morphologyEx(image, image, MORPH_CLOSE, element);
+    }
     if (show){
         set_img_name("Close");
         imshow(img_name, image);
@@ -483,8 +485,10 @@ Mat MyClass::getBys(Mat image, bool show){
     return image;
 }
 
-Mat MyClass::getErode(Mat image, bool show){
-    erode(image, image, element);
+Mat MyClass::getErode(Mat image, bool show, int times){
+    for (int i = 0; i < times; i++){
+        erode(image, image, element);
+    }
     if (show){
         set_img_name("Erode");
         imshow(img_name, image);
@@ -493,8 +497,8 @@ Mat MyClass::getErode(Mat image, bool show){
     return image;
 }
 
-Mat MyClass::getDilate(Mat image, bool show){
-    for (int i = 0; i < 3; i++){
+Mat MyClass::getDilate(Mat image, bool show, int times){
+    for (int i = 0; i < times; i++){
         dilate(image, image, element);
     }
 
@@ -556,8 +560,8 @@ Mat MyClass::getRect(Mat image, Mat simage, bool show){
          * 将扫描的图像裁剪下来, 并保存为相应的结果, 用来解码;
          *     保留一些X方向的边界, 对rect进行一定的扩张;
          */
-        myRect.x = myRect.x - (myRect.width / 20);
-        myRect.width = myRect.width*1.1;
+        //myRect.x = myRect.x - (myRect.width / 20);
+        //myRect.width = myRect.width*1.1;
         Mat resultImage = Mat(srcimage, myRect);
 
         if (show){
