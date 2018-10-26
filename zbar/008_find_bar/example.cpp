@@ -377,17 +377,17 @@ void MyClass::Run(){
     //5. 二值化;
     image = getThold(image, true);
 
-    //6. 闭运算;
+    //6. 闭运算, 填充条形码间隙;
     image = getBys(image, true, 1);
 
-    //7. 腐蚀;
+    //7. 腐蚀, 去除孤立的点;
     image = getErode(image, true, 1);
 
-    //8. 膨胀;
+    //8. 膨胀, 填充条形码间空隙, 根据核的大小, 可能需要2~3次膨胀操作;
     image = getDilate(image, true, 3);
 
     //9. 获取ROI;
-    image = getRect(image, srcimage, true);
+    image = getRect(image, srcimage, false);
 
     //10. start Zbar decode;
     Dis_code(image, true);
@@ -421,6 +421,9 @@ Mat MyClass::getGass(Mat image, bool show){
     return cimage;
 }
 
+/*
+ * 使用Sobel算子, 求得水平和垂直方向灰度图像的梯度差;
+ */
 Mat MyClass::getSobel(Mat image, bool show){
     Mat cimageX16s, cimageY16s, imageSobelX, imageSobelY, out;
 
@@ -464,7 +467,7 @@ Mat MyClass::getBlur(Mat image, bool show){
 Mat MyClass::getThold(Mat image, bool show){
     Mat cimage;
     //zgj, the thres is ?
-    threshold(image, cimage, 112, 255, CV_THRESH_BINARY);
+    threshold(image, cimage, 62, 255, CV_THRESH_BINARY);
     if (show){
         set_img_name("Thres-hold");
         imshow(img_name, cimage);
